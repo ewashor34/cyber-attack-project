@@ -1,0 +1,553 @@
+---
+title: "Cybersecurity Project"
+author: "Elias Washor, Wesley Ittner"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducing Dataset:
+
+This cybersecurity dataset gives an overview of cyberattacks in
+different countries, industries, and years. It includes different
+aspects of each attack, including the nature of the threat, the method
+of execution, and the impact in terms of how much data was compromised
+and the financial damage. The timeframe in the dataset ranges from 2015
+to 2024, there are 3000+ records, and there are 3 numerical variables
+and 7 categorical variables. Here are the variables:
+
+-   Country: Specifies the geographical location where the cyberattack
+    occurred. We can do an analysis of which regions experience the most
+    incidents.
+
+-   Year: Indicates when the attack took place for trend analysis over
+    time.
+
+-   Threat Type: Classifies the type of cyber threat, such as Malware,
+    DDoS, or Phishing, helping to identify the most common threats.
+
+-   Affected Industry: Identifies the sector targeted, such as Finance,
+    Healthcare, or Retail, showing which industries are most vulnerable.
+
+-   Users Affected: Measures the number of users affected by the attack,
+    we can look into the scale of data loss.
+
+-   Financial Impact (\$M): Estimates the financial loss caused by the
+    attack in millions, helping assess economic consequences.
+
+-   Vulnerability Type: What vulnerability was exploited for the attack
+    e.g. unpatched software
+
+-   Attack Source: Where did the attack originate from: hacker group,
+    Insider, Unknown, Nation-state
+
+-   Response Time (Hours): Records how long it took to mitigate the
+    attack, which can indicate how prepared organizations are for
+    stopping different levels of cybersecurity threats.
+
+-   Mitigation Strategy: Lists the countermeasures used to address the
+    attack, such as antivirus, vpn, etc. We can then assess which
+    strategies are most effective.
+
+The goal of the project is to uncover patterns in cyberattacks across
+time, geography, and response strategies to aid cybersecurity efforts in
+the future.
+
+## <!-- Load Data: -->
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(gridExtra)
+
+cyber_data <- read.csv("Cybersecurity_2015_2024.csv")
+
+## renaming the variables for easier code 
+names(cyber_data) <- c(
+  "country",
+  "year",
+  "attack_type",
+  "industry",
+  "loss_m",           
+  "users_affected",   
+  "attack_source",
+  "vuln_type",        
+  "defense",          
+  "res_time_hr")
+```
+
+## 1. Which countries experience the most cybersecurity attacks?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+attack_ct_by_country <- cyber_data |> 
+  count(country) |>  
+  arrange(desc(n))
+ 
+p <- ggplot(attack_ct_by_country, aes(x = reorder(country, -n), y=n)) + 
+  geom_col(fill = "lightblue") +
+  xlab('Country')+
+  ylab('Number of Attacks') +
+  theme_minimal()
+  
+p
+```
+
+First, we analyzed which countries face the most cyberattacks by
+creating a bar chart, which aggregates the total number of attacks by
+country. The **UK** experienced the highest number of attacks, followed
+by **Brazil** and **India**. In contrast, **China** and the **United
+States** had the fewest attacks during this period.
+
+Overall, the distribution of attack counts is fairly balanced across
+countries, suggesting that cybersecurity threats are a global issue
+rather than being concentrated in a region between 2015 and 2024.
+
+## 2. How have cybersecurity attacks changed over time?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(kableExtra)
+
+data <- read.csv("Cybersecurity_2015_2024.csv")
+
+yearly_attacks <- data |>
+  group_by(Year) |>
+  summarise(Number_of_Attacks = n()) |>
+  arrange(Year) 
+  
+## nicely formatted table using kable 
+yearly_attacks |>
+  kable(format = "html") |>
+  kable_styling(full_width = FALSE)
+
+attack_trend_plot <- ggplot(yearly_attacks, aes(x = factor(Year), 
+                                                y = Number_of_Attacks, group = 1)) +
+  geom_line(color = "red", size = 1.2) +
+  geom_point(color = "red", size = 3) +
+  labs(title = "Cybersecurity Attacks Over Time (2015–2024)",
+       x = "Year", y = "Number of Attacks") +
+  theme_minimal()
+
+print(attack_trend_plot)
+```
+
+The line plot shows the number of cybersecurity attacks per year from
+2015 to 2024. Overall, the number of attacks has fluctuated. There is no
+clear long-term upward or downward trend. However, the most noticeable
+dip occurred in 2019, when attacks fell to 263, compared to a high of
+319 in 2017.
+
+After that, attack counts grew quickly and were stable around the
+300–320 range. The year 2023 tied with 2017 for the highest number of
+attacks (315) besides 2017 (319). We conclude that while there is
+year-to-year variability, the general number of attacks remains high in
+recent years. It reinforces the idea that cybersecurity threats are
+persistent and, unfortunately, not declining.
+
+## 3. What are the most common types of cybersecurity threats?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+
+threat_counts <- data |>
+  group_by(Attack.Type) |>
+  summarise(Frequency = n()) |>
+  arrange(desc(Frequency))
+
+threat_counts |>
+kable(format = "html") |>
+  kable_styling(full_width = FALSE)
+
+top_threats_plot <- threat_counts |>
+  ggplot(aes(x = reorder(Attack.Type, Frequency), y = Frequency)) +
+  geom_bar(stat = "identity", fill = "darkorange") +
+  coord_flip() +
+  labs(title = "Most Common Types of Cybersecurity Threats",
+       x = "Attack Type", y = "Frequency") +
+  theme_minimal()
+
+print(top_threats_plot)
+```
+
+The top three most common types of cybersecurity threats are DDoS
+(Distributed Denial of Service) attacks, phishing, and SQL injection.
+DDoS attacks lead the list with a little over 500 reported cases.
+Phishing remains widespread; It tricks users into revealing sensitive
+information like passwords and credit card numbers.
+
+SQL injection is also a major concern. Hackers can access or manipulate
+databases by exploiting vulnerabilities. On the other hand, ransomware,
+malware, and man-in-the-middle (MitM) attacks comprise the bottom three
+threats, with a little more than 400 incidents reported. While less
+frequent, these threats still pose risks by compromising data, locking
+users out of systems, or intercepting private communications.
+
+## 4. Which vulnerabilities are most commonly exploited in cyberattacks?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+
+names(data) <- make.names(names(data))
+
+vulnerability_counts <- data |>
+  group_by(Security.Vulnerability.Type) |>
+  summarise(Frequency = n()) |>
+  arrange(desc(Frequency))
+
+vulnerability_counts|>
+kable(format = "html") |>
+  kable_styling(full_width = FALSE)
+
+ggplot(vulnerability_counts, aes(x = reorder(Security.Vulnerability.Type, 
+                                             Frequency), y = Frequency)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  coord_flip() +
+  labs(
+    title = "Most Commonly Exploited Vulnerabilities",
+    x = "Vulnerability Type",
+    y = "Number of Exploits"
+  ) +
+  theme_minimal()
+```
+
+The most exploited vulnerability type is Zero-day, with 785 reported
+cases, where attackers take advantage of bugs before patches are
+released. Next is social engineering, which tricks users into revealing
+sensitive information. Unpatched software follows because outdated
+systems often have weaknesses. Weak passwords come last with 730
+incidents, allowing for attackers to gain easy access. These
+vulnerabilities demonstrate the need for strong passwords, regular
+updates, and user awareness to improve cybersecurity.
+
+## 5. Which industries are most affected by cyberattacks?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+
+industry_counts <- data |>
+  group_by(Target.Industry) |>
+  summarise(Frequency = n()) |>
+  arrange(desc(Frequency))
+
+industry_counts |>
+kable(format = "html") |>
+  kable_styling(full_width = FALSE)
+
+ggplot(industry_counts, aes(x = reorder(Target.Industry, Frequency), 
+                            y = Frequency)) +
+  geom_bar(stat = "identity", fill = "darkred") +
+  coord_flip() +
+  labs(title = "Industries Most Affected by Cyberattacks",
+       x = "Industry", y = "Number of Attacks") +
+  theme_minimal()
+```
+
+The top three industries most affected by cyberattacks are IT, with
+nearly 450 incidents, followed by banking and healthcare. These sectors
+are frequent targets probably because of the high value of their data
+and services. Retail, education, and telecommunications come next, which
+handle large volumes of sensitive customer information. Finally, the
+government sector comes last with around 400 reported attacks.
+
+## 6. What is the relationship between number of affected users and financial impact?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+
+names(data) <- make.names(names(data))
+
+ggplot(data, aes(x = Number.of.Affected.Users, y = Financial.Loss..in.Million...)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  scale_x_log10() + 
+  scale_y_log10() +
+  labs(
+    title = "Relationship Between Number of Affected Users and Financial Impact",
+    x = "Number of Affected Users (log scale)",
+    y = "Financial Loss $Million (log)"
+  ) +
+  theme_minimal()
+
+correlation <- cor(data$Number.of.Affected.Users,
+                   data$Financial.Loss..in.Million..., 
+                   use = "complete.obs")
+
+cat("Correlation between affected users and financial loss:", round(correlation, 3), "\n")
+```
+
+From the data, there appears to be no relationship between the number of
+affected users and financial losses. The correlation is just 0.002,
+indicating virtually no linear connection between the two. This means
+that even if more users are affected, it doesn't necessarily lead to
+higher financial losses. The relationship is so weak it may be due to
+chance or other unmeasured factors. Overall, the number of affected
+users is not a strong predictor of financial loss in this dataset.
+
+```{=html}
+<!-- 
+!!!!! 0.02 is quite low for a correlation, 
+we conclude that there is not a linear relationship 
+-->
+```
+## 7. How does resolution time vary by severity level?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+severity_cyber <- cyber_data |> 
+  mutate(Severity = cut_number(loss_m, 5)) 
+
+response_plt <- ggplot(severity_cyber, aes(x = Severity, 
+                                       y = res_time_hr)) +
+  geom_boxplot() +
+  ylab("Resolution Time in Hours") +
+  xlab('Severity (Financial Loss in Millions)') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+
+labels <- c("[424,200K)", "[200K,400K)", "[400K,600K)", "[600K,800K)", "[800K,1M)")
+
+severity_cyber_u <- cyber_data |> 
+  mutate(Severity = cut(users_affected,
+         breaks = c(424, 200000, 400000, 600000, 800000, 1000000),
+         labels = labels, include.lowest = TRUE))
+
+response_p2 <- ggplot(severity_cyber_u, aes(x = Severity, 
+                                       y = res_time_hr)) +
+  geom_boxplot() +
+  ylab("") +
+  scale_y_continuous() + 
+  xlab('Severity (Users Affected)') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+
+response_plt + response_p2
+```
+
+This set of boxplots compares the distribution of resolution times (in
+hours) for cybersecurity incidents across five severity levels, measured
+by two criteria: `Financial loss` (in millions of USD) and
+`Number of Users Affected` .
+
+Across both severity measures, the resolution times are fairly
+consistent. Median values fall around **35–40 hours for all groups**,
+and the interquartile ranges show similar spreads. For financial loss,
+the highest severity group **(\$80.3–100M)** shows a slightly lower
+median resolution time, while affected users shows a slight dip in the
+**[600K–800K)** range. In the big picture, these differences are minor
+and do not indicate a clear trend.
+
+The data suggests that resolution time is not strongly affected by
+incident severity, whether measured by cost or users affected. Slight
+drops in higher severity groups could be because of greater
+prioritization, but the close distributions suggest that there may be
+other factors that have a greater influence on resolution time.
+
+## 8. Which mitigation strategies are most effective/worse in reducing financial impact?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+mitigation_plt <- 
+  ggplot(cyber_data, aes(x = defense, y = loss_m)) + 
+  geom_boxplot() +
+  coord_flip() +
+  theme_minimal() +
+  labs(x="Mitigation Strategy", y="Financial Loss (M)")
+
+mitigation_plt
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(kableExtra)
+
+cyber_data |> 
+  group_by(defense) |> 
+  summarize(
+    median   = median(loss_m, na.rm=TRUE),
+    IQR   = IQR(loss_m, na.rm=TRUE),
+    '90th percentile'   = quantile(loss_m, 0.9, na.rm=TRUE)) |>
+  arrange(`90th percentile`) |>
+  kable(format = "html", 
+        caption = 'Median, IQR, and 90th percentile of Loss in Millions') |>
+  kable_styling(full_width = FALSE)
+```
+
+This boxplot compares the distribution of financial losses (in millions
+of USD) for five different cybersecurity defense strategies:
+**Encryption, Firewall, VPN, AI-based Detection, and Antivirus**.
+
+All five strategies show a similar distribution of losses, with median
+values clustered around \$51-\$52 Million. However, **Firewall** shows a
+slightly lower median and a comparable interquartile range (IQR),
+suggesting marginally better performance in limiting financial damage.
+
+Another option is to look at the worst-case scenarios using a percentile
+of the loss variable, which we see in the table. Specifically,
+**Antivirus** has the highest 90th percentile loss, indicating that in
+the worst 10% of cases, it performs worse than the others.
+
+Overall, no strategy appears drastically more effective than the others
+in reducing financial losses. The close medians and similar IQRs suggest
+that financial impact is insensitive to the defense method used, or that
+other factors might be more influential. The slightly lower losses for
+Firewall imply that it is a strong traditional defense strategy. Also,
+while these numbers are close, we must think about the scale; Firewall
+has a median loss that is two million USD lower than other defenses and
+a few million dollars are still significant.
+
+## 9. How does the volume of data breached vary across industries?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cyber_data |>
+  ggplot(aes(x = reorder(industry, users_affected, FUN = median), y = users_affected)) +
+    geom_boxplot(outlier.size = 0.5) +
+    coord_flip() +
+    theme_minimal() +
+    labs(
+      x = "Industry",
+      y = "Number of Affected Users",
+      title = "Distribution of Breach Size by Industry"
+    )
+```
+
+We wanted to analyze whether different industries have varying amounts
+of data breached in cyberattacks. A good metric for volume of data
+breached would be the variable `Affected Users`. Thus, these are
+boxplots for each `industry`: Banking, Education, Government,
+Healthcare, Retail, IT, and Telecommunications.
+
+The seven industries have similar amounts of data breached for
+cyberattacks. The median for all industries remains close to 500,000
+users. However, the IT industry seems to have a slightly higher breach
+size compared to other groups, which makes sense, companies in the IT
+sector would expect to have bigger issues with cyberattacks. Further, we
+can see that Telecommunications and Retail industries have the smallest
+median affected users for cyberattacks during the nine year period.
+
+Perhaps, a t-test of `IT` versus `Telecommunications` will confirm that
+there is no difference in users affected among the different industries.
+
+```{r}
+Tele_loss <- cyber_data |> filter(industry == 'Telecommunications')
+IT_loss <- cyber_data |> filter(industry == 'IT')
+
+t.test(Tele_loss$users_affected, IT_loss$users_affected)
+```
+
+The t-test yields a p-value of 0.15, which is greater than the standard
+alpha (0.05). Therefore, we fail to reject that mean users affected in
+`IT` is the same as mean users affected in the `Telecommunications`
+industry. In summary, these are small differences between industries and
+are insufficient to label as a trend in `Users Affected`.
+
+## 10. Which countries had the highest and lowest financial losses due to cyberattacks in 2019, when there were less attacks?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+country_losses <- cyber_data |> 
+  filter(year == 2019) |>
+  group_by(country) |>
+  summarise(total_loss = sum(loss_m, na.rm = TRUE),
+            avg_loss = sum(loss_m/n())) |>
+  ungroup() |>
+  arrange(total_loss)
+
+high_loss <- country_losses |> 
+  slice_max(order_by = total_loss, n = 5) |> 
+  ggplot(aes(x = reorder(country,total_loss), y = total_loss)) +
+  geom_col(fill="salmon") +
+  labs(y="Total Loss in Millions", x= "Country") +
+  ggtitle("Countries with Biggest Financial Losses") +
+  theme_minimal()
+
+low_loss <- country_losses |> 
+  slice_min(order_by = total_loss, n = 5) |>
+  ggplot(aes(reorder(country,total_loss), y = total_loss)) +
+  geom_col(fill="lightgreen") +
+  labs(y="Total Loss in Millions", x= "Country") +
+  ggtitle("Countries with Lowest Financial Losses") +
+  theme_minimal()
+
+high_loss + low_loss
+```
+
+In 2019, there were less attacks compared to other years in 2015-2024.
+It would be interesting to see how financial loss varied by country
+during this period.
+
+The two bar charts display the countries that had the biggest financial
+losses in 2019 in red and those that had the smallest financial losses
+in 2019 in green. First, the **UK** has the biggest total financial
+losses (close to \$1.8 Billion) due to cyberattacks, then Russia
+followed with \~\$1.4 Billion. Further, **Australia**, **Brazil**, and
+the **US** had the smallest losses in 2019. Australia recorded \~\$1.1
+billion dollars in losses that year.
+
+The **UK** seemed to have almost twice as large losses as some other
+countries this year. So, let us instead look at average loss per attack
+since there are a different number of attacks for different countries.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+high_loss <- country_losses |> 
+  slice_max(order_by = avg_loss, n = 5) |> 
+  ggplot(aes(x=reorder(country, avg_loss), y = avg_loss)) +
+  geom_col(fill="salmon") +
+  labs(y="Average Loss Per Attack", x= "Country") +
+  ggtitle("Countries with Biggest Financial Losses") +
+  theme_minimal()
+
+low_loss <- country_losses |> 
+  slice_min(order_by = avg_loss, n = 5) |>
+  ggplot(aes(x=reorder(country, avg_loss), y = avg_loss)) +
+  geom_col(fill="lightgreen") +
+  labs(y="Average Loss Per Attack", x= "Country") +
+  ggtitle("Countries with Lowest Financial Losses") +
+  theme_minimal()
+
+high_loss + low_loss
+```
+
+Now we see a different leader in financial losses when accounting for
+the number of attacks a country faced in 2019: **Germany**. On average,
+**Germany** had the largest loss per attack at nearly \$70 Million, and
+the **UK** and **Japan** followed with over \$50 Million average loss.
+Additionally, now the countries that had the smallest loss per attack
+were **Australia, India, and Brazil** respectively. On average,
+**Australia** lost \$40 Million per attack in 2019 with **India** and
+**Brazil** losing close to \$45 Million per attack.
+
+# Conclusion:
+
+This project reveals key trends in cybersecurity incidents from 2015 to
+2024. While the UK experienced the highest number of attacks and Germany
+faced the greatest average financial loss per incident in 2019, these
+outcomes vary depending on how impact is measured. Over time, the volume
+of cyberattacks remained consistent from 2017 to 2024, indicating
+persistent threat levels rather than a clear upward or downward trend.
+
+DDoS and phishing were the most common types of threats, and zero-day
+vulnerabilities were the most frequently exploited, which highlights the
+technical and human elements in cybersecurity attacks. Also, the number
+of users affected by an attack did not correlate strongly with financial
+losses, suggesting that the scale of user impact alone is not a great
+predictor of economic damage.
+
+Across seven different industries, breach sizes were consistent, with IT
+seeing slightly higher user impact, likely due to the vast data that IT
+companies have. Resolution time did not vary significantly by severity,
+and mitigation strategies showed only marginal differences in
+effectiveness, with firewall defenses performing slightly better in
+median financial losses.
+
+A simple linear model is not sufficient for predicting financial loss
+for this dataset. We would expand on this analysis by applying
+non-linear models or other supervised learning techniques to identify
+which features most influence financial loss. This could help uncover
+deeper relationships that aren’t apparent through exploratory analysis.
+Ultimately it would guide more targeted and effective cybersecurity
+strategies.
